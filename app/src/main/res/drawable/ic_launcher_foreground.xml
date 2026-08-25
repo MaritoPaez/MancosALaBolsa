@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- El cuerpo de la pelota de tenis -->
+    <path
+        android:fillColor="#D4F05C"
+        android:pathData="M54,54m-35,0a35,35 0,1 0,70 0a35,35 0,1 0,-70 0" />
+
+    <!-- Las líneas características blancas -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M32,38 C 45,45 45,63 32,70" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M76,38 C 63,45 63,63 76,70" />
+</vector>
