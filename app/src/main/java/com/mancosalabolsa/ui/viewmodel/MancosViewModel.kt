@@ -21,6 +21,11 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
+    // Lista de jugadores activos para el sorteo
+    val jugadoresActivos: StateFlow<List<Jugador>> = repository.jugadoresActivos.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+    )
+
     // Lista de exclusiones
     val allExclusiones: StateFlow<List<Exclusion>> = repository.allExclusiones.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
@@ -43,6 +48,10 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private val _errorSorteo = MutableStateFlow<String?>(null)
     val errorSorteo = _errorSorteo.asStateFlow()
 
+    // Flag de inconsistencia de posiciones
+    private val _inconsistenciaPosiciones = MutableStateFlow<Boolean>(false)
+    val inconsistenciaPosiciones = _inconsistenciaPosiciones.asStateFlow()
+
     fun togglePlayerSelection(playerId: Int) {
         val current = _selectedPlayerIds.value
         if (current.contains(playerId)) {
@@ -53,7 +62,9 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     }
 
     fun realizarSorteo() {
-        val presentes = allJugadores.value.filter { _selectedPlayerIds.value.contains(it.id) }
+        val presentes = allJugadores.value.filter { 
+            _selectedPlayerIds.value.contains(it.id) && it.activo 
+        }
         val exclusiones = allExclusiones.value
 
         if (presentes.size < 2) {
@@ -61,27 +72,44 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             return
         }
 
-        val resultado = generarParejas(presentes, exclusiones)
+        // Intento 1: Sorteo ideal (Sin D-D ni R-R)
+        var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false)
+        
         if (resultado != null) {
             _resultadoSorteo.value = resultado
+            _inconsistenciaPosiciones.value = false
             _errorSorteo.value = null
-            viewModelScope.launch {
-                repository.saveSorteo(resultado)
-            }
+            saveResult(resultado)
         } else {
-            _errorSorteo.value = "No se encontró una combinación válida con estas exclusiones"
-            _resultadoSorteo.value = null
+            // Intento 2: Sorteo con inconsistencias (Permitiendo D-D o R-R)
+            resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true)
+            if (resultado != null) {
+                _resultadoSorteo.value = resultado
+                _inconsistenciaPosiciones.value = true
+                _errorSorteo.value = null
+                saveResult(resultado)
+            } else {
+                _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
+                _resultadoSorteo.value = null
+            }
         }
     }
 
-    private fun generarParejas(jugadores: List<Jugador>, exclusiones: List<Exclusion>): String? {
-        val totalIntentos = 500
+    private fun saveResult(resultado: String) {
+        viewModelScope.launch {
+            repository.saveSorteo(resultado)
+        }
+    }
+
+    private fun intentarSorteo(
+        jugadores: List<Jugador>, 
+        exclusiones: List<Exclusion>, 
+        permitirForzados: Boolean
+    ): String? {
+        val totalIntentos = 1000
         repeat(totalIntentos) {
             val shuffled = jugadores.shuffled()
-            val parejas = mutableListOf<String>()
             var esValido = true
-            val usados = mutableSetOf<Int>()
-
             val listaParejas = mutableListOf<List<Jugador>>()
             
             var i = 0
@@ -90,14 +118,24 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                     val p1 = shuffled[i]
                     val p2 = shuffled[i + 1]
                     
+                    // Regla de Exclusiones (Estricta)
                     if (estanExcluidos(p1, p2, exclusiones)) {
                         esValido = false
                         break
                     }
+
+                    // Regla de Posiciones (Opcional según permitirForzados)
+                    if (!permitirForzados) {
+                        if ((p1.posicion == "D" && p2.posicion == "D") || 
+                            (p1.posicion == "R" && p2.posicion == "R")) {
+                            esValido = false
+                            break
+                        }
+                    }
+
                     listaParejas.add(listOf(p1, p2))
                     i += 2
                 } else {
-                    // Último jugador impar (Suelto)
                     listaParejas.add(listOf(shuffled[i]))
                     i += 1
                 }
@@ -118,24 +156,27 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     }
 
     private fun formatResultado(parejas: List<List<Jugador>>): String {
-        return parejas.joinToString("\n") { p ->
+        return parejas.mapIndexed { index, p ->
             if (p.size == 1) {
-                "${p[0].nombre} (Suelto/a)"
+                "${index + 1}. ${p[0].nombre} (${p[0].posicion}) - (Suelto/a)"
             } else {
-                p.joinToString(" - ") { it.nombre }
+                val p1 = p[0]
+                val p2 = p[1]
+                "${index + 1}. ${p1.nombre} (${p1.posicion}) - ${p2.nombre} (${p2.posicion})"
             }
-        }
+        }.joinToString("\n")
     }
 
     fun limpiarResultado() {
         _resultadoSorteo.value = null
         _errorSorteo.value = null
+        _inconsistenciaPosiciones.value = false
     }
 
     // Métodos para gestión de jugadores
-    fun addJugador(nombre: String) {
+    fun addJugador(nombre: String, posicion: String = "X") {
         viewModelScope.launch {
-            repository.insertJugador(Jugador(nombre = nombre))
+            repository.insertJugador(Jugador(nombre = nombre, posicion = posicion))
         }
     }
 

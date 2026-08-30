@@ -40,7 +40,8 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text("Mancos a la Bolsa", style = MaterialTheme.typography.titleMedium)
-                    Text("Versión 1.0 - MVP", style = MaterialTheme.typography.bodySmall)
+                    Text("Versión 2.0", style = MaterialTheme.typography.bodySmall)
+                    Text("Creador: Mario Paez", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

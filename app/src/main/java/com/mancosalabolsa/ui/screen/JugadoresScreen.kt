@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mancosalabolsa.data.entity.Jugador
 import com.mancosalabolsa.ui.viewmodel.MancosViewModel
@@ -18,6 +20,7 @@ import com.mancosalabolsa.ui.viewmodel.MancosViewModel
 fun JugadoresScreen(viewModel: MancosViewModel) {
     val jugadores by viewModel.allJugadores.collectAsState()
     var nuevoNombre by remember { mutableStateOf("") }
+    var nuevaPosicion by remember { mutableStateOf("X") }
     var jugadorParaEditar by remember { mutableStateOf<Jugador?>(null) }
 
     Column(
@@ -26,25 +29,41 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
             .padding(16.dp)
     ) {
         // Formulario para añadir
-        Row(
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
-            OutlinedTextField(
-                value = nuevoNombre,
-                onValueChange = { nuevoNombre = it },
-                label = { Text("Nuevo Jugador") },
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(
-                onClick = {
-                    if (nuevoNombre.isNotBlank()) {
-                        viewModel.addJugador(nuevoNombre)
-                        nuevoNombre = ""
+            Column(modifier = Modifier.padding(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = nuevoNombre,
+                        onValueChange = { nuevoNombre = it },
+                        label = { Text("Nombre del Jugador") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = {
+                            if (nuevoNombre.isNotBlank()) {
+                                viewModel.addJugador(nuevoNombre, nuevaPosicion)
+                                nuevoNombre = ""
+                                nuevaPosicion = "X"
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Añadir")
                     }
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir")
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text("Habilidad predominante:", style = MaterialTheme.typography.labelMedium)
+                PosicionSelector(
+                    selectedPosicion = nuevaPosicion,
+                    onPosicionSelected = { nuevaPosicion = it }
+                )
             }
         }
 
@@ -66,17 +85,38 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                 ) {
                     Row(
                         modifier = Modifier
-                            .padding(16.dp)
+                            .padding(12.dp)
                             .fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = jugador.nombre,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (jugador.activo) Color.Unspecified else MaterialTheme.colorScheme.outline
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = jugador.nombre,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (jugador.activo) Color.Unspecified else MaterialTheme.colorScheme.outline
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Badge(
+                                    containerColor = when(jugador.posicion) {
+                                        "D" -> Color(0xFF2196F3) // Azul para Drive
+                                        "R" -> Color(0xFFF44336) // Rojo para Revés
+                                        else -> Color(0xFF9C27B0) // Púrpura para Ambos
+                                    }
+                                ) {
+                                    Text(
+                                        text = when(jugador.posicion) {
+                                            "D" -> "DRIVE"
+                                            "R" -> "REVÉS"
+                                            else -> "AMBOS"
+                                        },
+                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -100,20 +140,34 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
     // Diálogo de edición
     if (jugadorParaEditar != null) {
         var nombreEditado by remember { mutableStateOf(jugadorParaEditar!!.nombre) }
+        var posicionEditada by remember { mutableStateOf(jugadorParaEditar!!.posicion) }
+        
         AlertDialog(
             onDismissRequest = { jugadorParaEditar = null },
             title = { Text("Editar Jugador") },
             text = {
-                OutlinedTextField(
-                    value = nombreEditado,
-                    onValueChange = { nombreEditado = it },
-                    label = { Text("Nombre") }
-                )
+                Column {
+                    OutlinedTextField(
+                        value = nombreEditado,
+                        onValueChange = { nombreEditado = it },
+                        label = { Text("Nombre") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Posición:", style = MaterialTheme.typography.labelMedium)
+                    PosicionSelector(
+                        selectedPosicion = posicionEditada,
+                        onPosicionSelected = { posicionEditada = it }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.updateJugador(jugadorParaEditar!!.copy(nombre = nombreEditado))
+                        viewModel.updateJugador(jugadorParaEditar!!.copy(
+                            nombre = nombreEditado,
+                            posicion = posicionEditada
+                        ))
                         jugadorParaEditar = null
                     }
                 ) {
@@ -129,5 +183,22 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
     }
 }
 
-// Para manejar el color que faltaba arriba si no se importa
-private val Color = androidx.compose.ui.graphics.Color
+@Composable
+fun PosicionSelector(
+    selectedPosicion: String,
+    onPosicionSelected: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        val opciones = listOf("D" to "Drive", "R" to "Revés", "X" to "Ambos")
+        opciones.forEach { (key, label) ->
+            FilterChip(
+                selected = selectedPosicion == key,
+                onClick = { onPosicionSelected(key) },
+                label = { Text(label) }
+            )
+        }
+    }
+}
