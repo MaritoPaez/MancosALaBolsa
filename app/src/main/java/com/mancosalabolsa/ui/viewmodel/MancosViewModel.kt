@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.mancosalabolsa.data.entity.Exclusion
 import com.mancosalabolsa.data.entity.Jugador
+import com.mancosalabolsa.data.model.BackupData
 import com.mancosalabolsa.data.repository.MancosRepository
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -186,6 +188,12 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         }
     }
 
+    fun deleteJugador(jugador: Jugador) {
+        viewModelScope.launch {
+            repository.deleteJugador(jugador)
+        }
+    }
+
     // Métodos para exclusiones
     fun addExclusion(idA: Int, idB: Int) {
         viewModelScope.launch {
@@ -208,6 +216,30 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     fun reiniciarApp() {
         viewModelScope.launch {
             repository.clearAllData()
+        }
+    }
+
+    fun exportarDatos(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val data = repository.getBackupData()
+            val json = Gson().toJson(data)
+            onResult(json)
+        }
+    }
+
+    fun importarDatos(json: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val data = Gson().fromJson(json, BackupData::class.java)
+                if (data != null && data.jugadores.isNotEmpty()) {
+                    repository.restoreBackup(data)
+                    onSuccess()
+                } else {
+                    onError("El archivo no tiene el formato correcto o está vacío")
+                }
+            } catch (e: Exception) {
+                onError("Error al procesar el archivo: ${e.message}")
+            }
         }
     }
 }

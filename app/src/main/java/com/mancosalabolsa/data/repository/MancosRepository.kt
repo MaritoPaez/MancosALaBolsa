@@ -4,7 +4,9 @@ import com.mancosalabolsa.data.dao.MancosDao
 import com.mancosalabolsa.data.entity.Exclusion
 import com.mancosalabolsa.data.entity.Historial
 import com.mancosalabolsa.data.entity.Jugador
+import com.mancosalabolsa.data.model.BackupData
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class MancosRepository(private val mancosDao: MancosDao) {
 
@@ -19,6 +21,10 @@ class MancosRepository(private val mancosDao: MancosDao) {
 
     suspend fun updateJugador(jugador: Jugador) {
         mancosDao.updateJugador(jugador)
+    }
+
+    suspend fun deleteJugador(jugador: Jugador) {
+        mancosDao.deleteJugador(jugador)
     }
 
     suspend fun addExclusion(exclusion: Exclusion) {
@@ -45,5 +51,23 @@ class MancosRepository(private val mancosDao: MancosDao) {
         mancosDao.clearAllExclusiones()
         mancosDao.clearAllJugadores()
         mancosDao.clearHistorial()
+    }
+
+    suspend fun getBackupData(): BackupData {
+        return BackupData(
+            jugadores = mancosDao.getAllJugadores().first(),
+            exclusiones = mancosDao.getAllExclusiones().first(),
+            historial = mancosDao.getHistorial().first()
+        )
+    }
+
+    suspend fun restoreBackup(data: BackupData) {
+        mancosDao.clearAllExclusiones()
+        mancosDao.clearAllJugadores()
+        mancosDao.clearHistorial()
+        
+        mancosDao.insertJugadores(data.jugadores)
+        mancosDao.insertExclusiones(data.exclusiones)
+        mancosDao.insertHistoriales(data.historial)
     }
 }

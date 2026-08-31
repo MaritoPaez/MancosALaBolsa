@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +23,7 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
     var nuevoNombre by remember { mutableStateOf("") }
     var nuevaPosicion by remember { mutableStateOf("X") }
     var jugadorParaEditar by remember { mutableStateOf<Jugador?>(null) }
+    var jugadorParaEliminar by remember { mutableStateOf<Jugador?>(null) }
 
     Column(
         modifier = Modifier
@@ -123,6 +125,14 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                             IconButton(onClick = { jugadorParaEditar = jugador }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar")
                             }
+
+                            IconButton(onClick = { jugadorParaEliminar = jugador }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Eliminar",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                             
                             Switch(
                                 checked = jugador.activo,
@@ -176,6 +186,30 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { jugadorParaEditar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo de eliminación
+    if (jugadorParaEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { jugadorParaEliminar = null },
+            title = { Text("¿Eliminar Jugador?") },
+            text = { Text("¿Estás seguro de que quieres eliminar a ${jugadorParaEliminar!!.nombre}? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteJugador(jugadorParaEliminar!!)
+                        jugadorParaEliminar = null
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { jugadorParaEliminar = null }) {
                     Text("Cancelar")
                 }
             }

@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MancosDao {
     // Jugadores
-    @Query("SELECT * FROM jugadores WHERE activo = 1 ORDER BY nombre ASC")
+    @Query("SELECT * FROM jugadores WHERE activo = 1 ORDER BY nombre COLLATE NOCASE ASC")
     fun getJugadoresActivos(): Flow<List<Jugador>>
 
-    @Query("SELECT * FROM jugadores ORDER BY nombre ASC")
+    @Query("SELECT * FROM jugadores ORDER BY nombre COLLATE NOCASE ASC")
     fun getAllJugadores(): Flow<List<Jugador>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -20,6 +20,9 @@ interface MancosDao {
 
     @Update
     suspend fun updateJugador(jugador: Jugador)
+
+    @Delete
+    suspend fun deleteJugador(jugador: Jugador)
 
     // Exclusiones
     @Query("SELECT * FROM exclusiones")
@@ -37,6 +40,15 @@ interface MancosDao {
 
     @Insert
     suspend fun insertHistorial(historial: Historial)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJugadores(jugadores: List<Jugador>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExclusiones(exclusiones: List<Exclusion>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHistoriales(historiales: List<Historial>)
 
     @Query("DELETE FROM historial")
     suspend fun clearHistorial()
