@@ -2,7 +2,6 @@ package com.mancosalabolsa.ui.screen
 
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mancosalabolsa.ui.components.ShakingBagAnimation
 import com.mancosalabolsa.ui.viewmodel.MancosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,109 +32,125 @@ fun InicioScreen(viewModel: MancosViewModel) {
     val resultado by viewModel.resultadoSorteo.collectAsState()
     val error by viewModel.errorSorteo.collectAsState()
     val inconsistencia by viewModel.inconsistenciaPosiciones.collectAsState()
+    val sorteando by viewModel.sorteando.collectAsState()
     val context = LocalContext.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Row(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text(
-                text = "Selecciona los presentes",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.medium
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${seleccionados.size}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.primary
+                    text = "Selecciona los presentes",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "${seleccionados.size}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                items(jugadores) { jugador ->
+                    val isSelected = seleccionados.contains(jugador.id)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = isSelected,
+                                onValueChange = { viewModel.togglePlayerSelection(jugador.id) },
+                                role = Role.Checkbox
+                            )
+                            .padding(vertical = 8.dp, horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null
+                        )
+                        Column(modifier = Modifier.padding(start = 16.dp)) {
+                            Text(
+                                text = jugador.nombre,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = when(jugador.posicion) {
+                                    "D" -> "Drive"
+                                    "R" -> "Revés"
+                                    else -> "Ambos"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = when(jugador.posicion) {
+                                    "D" -> Color(0xFF2196F3)
+                                    "R" -> Color(0xFFF44336)
+                                    else -> MaterialTheme.colorScheme.outline
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { viewModel.realizarSorteo() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !sorteando,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1B5E20)
+                )
+            ) {
+                Icon(
+                    Icons.Default.SportsTennis, 
+                    contentDescription = null, 
+                    tint = Color(0xFFD4F05C)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("A LA BOLSA", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+
+            if (error != null) {
+                Text(
+                    text = error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                    textAlign = TextAlign.Center
                 )
             }
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            items(jugadores) { jugador ->
-                val isSelected = seleccionados.contains(jugador.id)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .toggleable(
-                            value = isSelected,
-                            onValueChange = { viewModel.togglePlayerSelection(jugador.id) },
-                            role = Role.Checkbox
-                        )
-                        .padding(vertical = 8.dp, horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = null // La interacción la maneja el Row completo
-                    )
-                    Column(modifier = Modifier.padding(start = 16.dp)) {
-                        Text(
-                            text = jugador.nombre,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = when(jugador.posicion) {
-                                "D" -> "Drive"
-                                "R" -> "Revés"
-                                else -> "Ambos"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = when(jugador.posicion) {
-                                "D" -> Color(0xFF2196F3)
-                                "R" -> Color(0xFFF44336)
-                                else -> MaterialTheme.colorScheme.outline
-                            }
-                        )
-                    }
+        // Capa de animación (Overlay)
+        if (sorteando) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.8f),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    ShakingBagAnimation()
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { viewModel.realizarSorteo() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1B5E20) // Verde oscuro deportivo
-            )
-        ) {
-            Icon(
-                Icons.Default.SportsTennis, 
-                contentDescription = null, 
-                tint = Color(0xFFD4F05C) // Amarillo pelota de tenis para que resalte
-            )
-            Spacer(Modifier.width(8.dp))
-            Text("A LA BOLSA", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-
-        if (error != null) {
-            Text(
-                text = error!!,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp),
-                textAlign = TextAlign.Center
-            )
         }
 
         if (resultado != null) {

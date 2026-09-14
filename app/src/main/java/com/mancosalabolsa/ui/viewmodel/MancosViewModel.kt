@@ -20,22 +20,22 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
 
     // Lista de todos los jugadores
     val allJugadores: StateFlow<List<Jugador>> = repository.allJugadores.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        viewModelScope, SharingStarted.Eagerly, emptyList()
     )
 
     // Lista de jugadores activos para el sorteo
     val jugadoresActivos: StateFlow<List<Jugador>> = repository.jugadoresActivos.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        viewModelScope, SharingStarted.Eagerly, emptyList()
     )
 
     // Lista de exclusiones
     val allExclusiones: StateFlow<List<Exclusion>> = repository.allExclusiones.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        viewModelScope, SharingStarted.Eagerly, emptyList()
     )
 
     // Historial
     val historial: StateFlow<List<com.mancosalabolsa.data.entity.Historial>> = repository.historial.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        viewModelScope, SharingStarted.Lazily, emptyList()
     )
 
     // ID de jugadores seleccionados para el sorteo
@@ -54,6 +54,10 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private val _inconsistenciaPosiciones = MutableStateFlow<Boolean>(false)
     val inconsistenciaPosiciones = _inconsistenciaPosiciones.asStateFlow()
 
+    // Estado de "Sorteando" (para animación)
+    private val _sorteando = MutableStateFlow(false)
+    val sorteando = _sorteando.asStateFlow()
+
     fun togglePlayerSelection(playerId: Int) {
         val current = _selectedPlayerIds.value
         if (current.contains(playerId)) {
@@ -64,35 +68,41 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     }
 
     fun realizarSorteo() {
-        val presentes = allJugadores.value.filter { 
-            _selectedPlayerIds.value.contains(it.id) && it.activo 
-        }
-        val exclusiones = allExclusiones.value
+        viewModelScope.launch {
+            val presentes = jugadoresActivos.value.filter { 
+                _selectedPlayerIds.value.contains(it.id)
+            }
+            val exclusiones = allExclusiones.value
 
-        if (presentes.size < 2) {
-            _errorSorteo.value = "Selecciona al menos 2 jugadores"
-            return
-        }
+            if (presentes.size < 2) {
+                _errorSorteo.value = "Selecciona al menos 2 jugadores"
+                return@launch
+            }
 
-        // Intento 1: Sorteo ideal (Sin D-D ni R-R)
-        var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false)
-        
-        if (resultado != null) {
-            _resultadoSorteo.value = resultado
-            _inconsistenciaPosiciones.value = false
-            _errorSorteo.value = null
-            saveResult(resultado)
-        } else {
-            // Intento 2: Sorteo con inconsistencias (Permitiendo D-D o R-R)
-            resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true)
+            _sorteando.value = true
+            kotlinx.coroutines.delay(2000) // 2 segundos de animación
+            _sorteando.value = false
+
+            // Intento 1: Sorteo ideal (Sin D-D ni R-R)
+            var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false)
+            
             if (resultado != null) {
                 _resultadoSorteo.value = resultado
-                _inconsistenciaPosiciones.value = true
+                _inconsistenciaPosiciones.value = false
                 _errorSorteo.value = null
                 saveResult(resultado)
             } else {
-                _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
-                _resultadoSorteo.value = null
+                // Intento 2: Sorteo con inconsistencias (Permitiendo D-D o R-R)
+                resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true)
+                if (resultado != null) {
+                    _resultadoSorteo.value = resultado
+                    _inconsistenciaPosiciones.value = true
+                    _errorSorteo.value = null
+                    saveResult(resultado)
+                } else {
+                    _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
+                    _resultadoSorteo.value = null
+                }
             }
         }
     }
