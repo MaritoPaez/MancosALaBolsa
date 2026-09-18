@@ -1,6 +1,7 @@
 package com.mancosalabolsa.ui.navigation
 
 sealed class Screen(val route: String, val title: String) {
+    object Splash : Screen("splash", "Bienvenida")
     object Inicio : Screen("inicio", "A la Bolsa")
     object Jugadores : Screen("jugadores", "Jugadores")
     object Exclusiones : Screen("exclusiones", "Exclusiones")

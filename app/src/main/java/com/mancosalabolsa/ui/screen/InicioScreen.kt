@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SportsTennis
@@ -16,8 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mancosalabolsa.ui.components.ShakingBagAnimation
@@ -184,7 +189,7 @@ fun InicioScreen(viewModel: MancosViewModel) {
                     Text(
                         "Parejas Sorteadas", 
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color.White // Blanco sobre gris oscuro
                     ) 
                 },
                 text = {
@@ -209,29 +214,71 @@ fun InicioScreen(viewModel: MancosViewModel) {
                         Text(
                             text = "Juegan primero las parejas 1 vs 2, y asi sucesivamente.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            color = Color.LightGray, // Mejor visibilidad
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
+                        
                         Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF0D3311), // Verde muy oscuro
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD4F05C).copy(alpha = 0.3f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = resultado!!,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    lineHeight = 28.sp,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                modifier = Modifier.padding(16.dp),
-                                fontWeight = FontWeight.Medium
-                            )
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                resultado!!.lines().forEach { linea ->
+                                    Text(
+                                        text = formatResultLine(linea),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            lineHeight = 28.sp,
+                                            letterSpacing = 0.5.sp
+                                        ),
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 },
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp
+                containerColor = Color(0xFF2E2E2E), // Gris oscuro pro
+                tonalElevation = 8.dp
             )
+        }
+    }
+}
+
+@Composable
+fun formatResultLine(linea: String): AnnotatedString {
+    val fluoGreen = Color(0xFFD4F05C)
+    val celeste = Color(0xFF2196F3)
+    val rojo = Color(0xFFF44336)
+    val blanco = Color.White
+
+    return buildAnnotatedString {
+        withStyle(style = SpanStyle(color = fluoGreen)) {
+            var currentIndex = 0
+            val regex = Regex("\\((D|R|X|Suelto/a)\\)")
+            val matches = regex.findAll(linea)
+
+            if (matches.none()) {
+                append(linea)
+                return@withStyle
+            }
+
+            matches.forEach { match ->
+                append(linea.substring(currentIndex, match.range.first))
+                val content = match.groupValues[1]
+                val color = when (content) {
+                    "D" -> celeste
+                    "R" -> rojo
+                    "X" -> blanco
+                    else -> if (content.contains("Suelto")) Color.LightGray else blanco
+                }
+                withStyle(style = SpanStyle(color = color, fontWeight = FontWeight.ExtraBold)) {
+                    append("($content)")
+                }
+                currentIndex = match.range.last + 1
+            }
+            if (currentIndex < linea.length) append(linea.substring(currentIndex))
         }
     }
 }

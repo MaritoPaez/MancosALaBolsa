@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +25,7 @@ import com.mancosalabolsa.ui.screen.ExclusionesScreen
 import com.mancosalabolsa.ui.screen.HistorialScreen
 import com.mancosalabolsa.ui.screen.InicioScreen
 import com.mancosalabolsa.ui.screen.JugadoresScreen
+import com.mancosalabolsa.ui.screen.SplashScreen
 import com.mancosalabolsa.ui.viewmodel.MancosViewModel
 import com.mancosalabolsa.ui.viewmodel.MancosViewModelFactory
 
@@ -38,50 +40,62 @@ fun MancosApp() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val isSplash = currentRoute == Screen.Splash.route
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Mancos a la Bolsa") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
+            if (!isSplash) {
+                TopAppBar(
+                    title = { Text("Mancos a la Bolsa") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.primary,
+                    )
                 )
-            )
+            }
         },
         bottomBar = {
-            NavigationBar {
-                val items = listOf(
-                    Screen.Inicio to Icons.Default.Home,
-                    Screen.Jugadores to Icons.Default.Person,
-                    Screen.Exclusiones to Icons.Default.List,
-                    Screen.Historial to Icons.Default.History,
-                    Screen.Configuracion to Icons.Default.Settings
-                )
-                items.forEach { (screen, icon) ->
-                    NavigationBarItem(
-                        icon = { Icon(icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = currentRoute == screen.route,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+            if (!isSplash) {
+                NavigationBar {
+                    val items = listOf(
+                        Screen.Inicio to Icons.Default.Home,
+                        Screen.Jugadores to Icons.Default.Person,
+                        Screen.Exclusiones to Icons.Default.List,
+                        Screen.Historial to Icons.Default.History,
+                        Screen.Configuracion to Icons.Default.Settings
                     )
+                    items.forEach { (screen, icon) ->
+                        NavigationBarItem(
+                            icon = { Icon(icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = currentRoute == screen.route,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Inicio.route,
-            modifier = Modifier.padding(innerPadding)
+            startDestination = Screen.Splash.route,
+            modifier = Modifier.padding(if (isSplash) androidx.compose.foundation.layout.PaddingValues(0.dp) else innerPadding)
         ) {
+            composable(Screen.Splash.route) {
+                SplashScreen(onFinished = {
+                    navController.navigate(Screen.Inicio.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                })
+            }
             composable(Screen.Inicio.route) {
                 InicioScreen(viewModel)
             }
