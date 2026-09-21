@@ -42,6 +42,15 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private val _selectedPlayerIds = MutableStateFlow<Set<Int>>(emptySet())
     val selectedPlayerIds = _selectedPlayerIds.asStateFlow()
 
+    // Lista de jugadores ordenados (seleccionados arriba, alfabético en ambos grupos)
+    val jugadoresOrdenados: StateFlow<List<Jugador>> = combine(
+        jugadoresActivos,
+        _selectedPlayerIds
+    ) { activos, seleccionados ->
+        val (conPresencia, sinPresencia) = activos.partition { seleccionados.contains(it.id) }
+        conPresencia.sortedBy { it.nombre } + sinPresencia.sortedBy { it.nombre }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     // Resultado del sorteo
     private val _resultadoSorteo = MutableStateFlow<String?>(null)
     val resultadoSorteo = _resultadoSorteo.asStateFlow()

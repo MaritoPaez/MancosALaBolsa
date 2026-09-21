@@ -67,7 +67,6 @@ fun MancosApp() {
                     items.forEach { (screen, icon) ->
                         NavigationBarItem(
                             icon = { Icon(icon, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
                             selected = currentRoute == screen.route,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -77,7 +76,8 @@ fun MancosApp() {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            alwaysShowLabel = false
                         )
                     }
                 }

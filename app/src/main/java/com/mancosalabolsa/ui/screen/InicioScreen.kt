@@ -32,7 +32,7 @@ import java.util.*
 
 @Composable
 fun InicioScreen(viewModel: MancosViewModel) {
-    val jugadores by viewModel.jugadoresActivos.collectAsState()
+    val jugadores by viewModel.jugadoresOrdenados.collectAsState()
     val seleccionados by viewModel.selectedPlayerIds.collectAsState()
     val resultado by viewModel.resultadoSorteo.collectAsState()
     val error by viewModel.errorSorteo.collectAsState()
@@ -76,11 +76,12 @@ fun InicioScreen(viewModel: MancosViewModel) {
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(jugadores) { jugador ->
+                items(jugadores, key = { it.id }) { jugador ->
                     val isSelected = seleccionados.contains(jugador.id)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateItem()
                             .toggleable(
                                 value = isSelected,
                                 onValueChange = { viewModel.togglePlayerSelection(jugador.id) },
