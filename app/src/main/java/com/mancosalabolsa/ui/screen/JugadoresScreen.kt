@@ -63,23 +63,19 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Posición:", style = MaterialTheme.typography.labelMedium)
-                        PosicionSelector(
-                            selectedPosicion = nuevaPosicion,
-                            onPosicionSelected = { nuevaPosicion = it }
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1.2f)) {
-                        Text("Categoría:", style = MaterialTheme.typography.labelMedium)
-                        CategoriaSelector(
-                            selectedCategoria = nuevaCategoria,
-                            onCategoriaSelected = { nuevaCategoria = it }
-                        )
-                    }
-                }
+                Text("Posición:", style = MaterialTheme.typography.labelMedium)
+                PosicionSelector(
+                    selectedPosicion = nuevaPosicion,
+                    onPosicionSelected = { nuevaPosicion = it }
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text("Categoría:", style = MaterialTheme.typography.labelMedium)
+                CategoriaSelector(
+                    selectedCategoria = nuevaCategoria,
+                    onCategoriaSelected = { nuevaCategoria = it }
+                )
             }
         }
 
@@ -286,7 +282,7 @@ fun CategoriaSelector(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(),
+            modifier = Modifier.fillMaxWidth().menuAnchor(),
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
         )
         ExposedDropdownMenu(
