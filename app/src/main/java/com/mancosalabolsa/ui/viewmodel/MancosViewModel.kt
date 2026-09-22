@@ -92,8 +92,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             kotlinx.coroutines.delay(2000) // 2 segundos de animación
             _sorteando.value = false
 
-            // Intento 1: Sorteo ideal (Sin D-D ni R-R)
-            var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false)
+            // Intento 1: Sorteo ideal (Sin D-D ni R-R) Y con nivelación de categoría estricta (14 a 16)
+            var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false, filtrarCategoria = true)
             
             if (resultado != null) {
                 _resultadoSorteo.value = resultado
@@ -101,16 +101,25 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                 _errorSorteo.value = null
                 saveResult(resultado)
             } else {
-                // Intento 2: Sorteo con inconsistencias (Permitiendo D-D o R-R)
-                resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true)
+                // Intento 2: Sorteo ideal de posiciones pero relajando categorías si no se puede cumplir
+                resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false, filtrarCategoria = false)
                 if (resultado != null) {
                     _resultadoSorteo.value = resultado
-                    _inconsistenciaPosiciones.value = true
+                    _inconsistenciaPosiciones.value = false
                     _errorSorteo.value = null
                     saveResult(resultado)
                 } else {
-                    _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
-                    _resultadoSorteo.value = null
+                    // Intento 3: Sorteo con inconsistencias de posición y sin filtro estricto de categoría
+                    resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true, filtrarCategoria = false)
+                    if (resultado != null) {
+                        _resultadoSorteo.value = resultado
+                        _inconsistenciaPosiciones.value = true
+                        _errorSorteo.value = null
+                        saveResult(resultado)
+                    } else {
+                        _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
+                        _resultadoSorteo.value = null
+                    }
                 }
             }
         }
@@ -125,7 +134,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private fun intentarSorteo(
         jugadores: List<Jugador>, 
         exclusiones: List<Exclusion>, 
-        permitirForzados: Boolean
+        permitirForzados: Boolean,
+        filtrarCategoria: Boolean
     ): String? {
         val totalIntentos = 1000
         repeat(totalIntentos) {
@@ -149,6 +159,15 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                     if (!permitirForzados) {
                         if ((p1.posicion == "D" && p2.posicion == "D") || 
                             (p1.posicion == "R" && p2.posicion == "R")) {
+                            esValido = false
+                            break
+                        }
+                    }
+
+                    // Regla de Categorías (Opcional según filtrarCategoria - Tendencia a +15, rango 14-16 tolerado)
+                    if (filtrarCategoria) {
+                        val sumaCat = p1.categoria + p2.categoria
+                        if (sumaCat < 14 || sumaCat > 16) {
                             esValido = false
                             break
                         }
@@ -179,11 +198,11 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private fun formatResultado(parejas: List<List<Jugador>>): String {
         return parejas.mapIndexed { index, p ->
             if (p.size == 1) {
-                "${index + 1}. ${p[0].nombre} (${p[0].posicion}) - (Suelto/a)"
+                "${index + 1}. ${p[0].nombre} (${p[0].posicion}) [C${p[0].categoria}] - (Suelto/a)"
             } else {
                 val p1 = p[0]
                 val p2 = p[1]
-                "${index + 1}. ${p1.nombre} (${p1.posicion}) - ${p2.nombre} (${p2.posicion})"
+                "${index + 1}. ${p1.nombre} (${p1.posicion}) [C${p1.categoria}] - ${p2.nombre} (${p2.posicion}) [C${p2.categoria}]"
             }
         }.joinToString("\n")
     }
@@ -195,9 +214,9 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     }
 
     // Métodos para gestión de jugadores
-    fun addJugador(nombre: String, posicion: String = "X") {
+    fun addJugador(nombre: String, posicion: String = "X", categoria: Int = 7) {
         viewModelScope.launch {
-            repository.insertJugador(Jugador(nombre = nombre, posicion = posicion))
+            repository.insertJugador(Jugador(nombre = nombre, posicion = posicion, categoria = categoria))
         }
     }
 

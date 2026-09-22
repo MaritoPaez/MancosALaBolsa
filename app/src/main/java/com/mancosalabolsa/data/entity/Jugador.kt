@@ -9,5 +9,6 @@ data class Jugador(
     val id: Int = 0,
     val nombre: String,
     val activo: Boolean = true,
-    val posicion: String = "X" // D: Drive, R: Revés, X: Ambos
+    val posicion: String = "X", // D: Drive, R: Revés, X: Ambos
+    val categoria: Int = 7 // C1 (Fuerte) a C9 (Flojo). Default C7.
 )

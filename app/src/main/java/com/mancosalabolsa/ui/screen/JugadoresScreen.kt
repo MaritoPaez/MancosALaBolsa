@@ -22,6 +22,7 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
     val jugadores by viewModel.allJugadores.collectAsState()
     var nuevoNombre by remember { mutableStateOf("") }
     var nuevaPosicion by remember { mutableStateOf("X") }
+    var nuevaCategoria by remember { mutableIntStateOf(7) }
     var jugadorParaEditar by remember { mutableStateOf<Jugador?>(null) }
     var jugadorParaEliminar by remember { mutableStateOf<Jugador?>(null) }
 
@@ -49,9 +50,10 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                     IconButton(
                         onClick = {
                             if (nuevoNombre.isNotBlank()) {
-                                viewModel.addJugador(nuevoNombre, nuevaPosicion)
+                                viewModel.addJugador(nuevoNombre, nuevaPosicion, nuevaCategoria)
                                 nuevoNombre = ""
                                 nuevaPosicion = "X"
+                                nuevaCategoria = 7
                             }
                         }
                     ) {
@@ -61,11 +63,23 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text("Habilidad predominante:", style = MaterialTheme.typography.labelMedium)
-                PosicionSelector(
-                    selectedPosicion = nuevaPosicion,
-                    onPosicionSelected = { nuevaPosicion = it }
-                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Posición:", style = MaterialTheme.typography.labelMedium)
+                        PosicionSelector(
+                            selectedPosicion = nuevaPosicion,
+                            onPosicionSelected = { nuevaPosicion = it }
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1.2f)) {
+                        Text("Categoría:", style = MaterialTheme.typography.labelMedium)
+                        CategoriaSelector(
+                            selectedCategoria = nuevaCategoria,
+                            onCategoriaSelected = { nuevaCategoria = it }
+                        )
+                    }
+                }
             }
         }
 
@@ -118,6 +132,16 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                                         color = Color.White
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Badge(
+                                    containerColor = Color(0xFF4CAF50) // Verde para Categoría
+                                ) {
+                                    Text(
+                                        text = "C${jugador.categoria}",
+                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                         
@@ -151,6 +175,7 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
     if (jugadorParaEditar != null) {
         var nombreEditado by remember { mutableStateOf(jugadorParaEditar!!.nombre) }
         var posicionEditada by remember { mutableStateOf(jugadorParaEditar!!.posicion) }
+        var categoriaEditada by remember { mutableIntStateOf(jugadorParaEditar!!.categoria) }
         
         AlertDialog(
             onDismissRequest = { jugadorParaEditar = null },
@@ -169,6 +194,12 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                         selectedPosicion = posicionEditada,
                         onPosicionSelected = { posicionEditada = it }
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Categoría:", style = MaterialTheme.typography.labelMedium)
+                    CategoriaSelector(
+                        selectedCategoria = categoriaEditada,
+                        onCategoriaSelected = { categoriaEditada = it }
+                    )
                 }
             },
             confirmButton = {
@@ -176,7 +207,8 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                     onClick = {
                         viewModel.updateJugador(jugadorParaEditar!!.copy(
                             nombre = nombreEditado,
-                            posicion = posicionEditada
+                            posicion = posicionEditada,
+                            categoria = categoriaEditada
                         ))
                         jugadorParaEditar = null
                     }
@@ -233,6 +265,48 @@ fun PosicionSelector(
                 onClick = { onPosicionSelected(key) },
                 label = { Text(label) }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoriaSelector(
+    selectedCategoria: Int,
+    onCategoriaSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = "C$selectedCategoria",
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            (1..9).forEach { cat ->
+                DropdownMenuItem(
+                    text = { Text("C$cat" + when(cat) {
+                        1 -> " (Pro/Muy Fuerte)"
+                        7 -> " (Normal/Default)"
+                        9 -> " (Principiante)"
+                        else -> ""
+                    }) },
+                    onClick = {
+                        onCategoriaSelected(cat)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
