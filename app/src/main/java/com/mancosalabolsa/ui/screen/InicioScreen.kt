@@ -100,12 +100,13 @@ fun InicioScreen(viewModel: MancosViewModel) {
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
+                            val posText = when(jugador.posicion) {
+                                "D" -> "Drive"
+                                "R" -> "Revés"
+                                else -> "Ambos"
+                            }
                             Text(
-                                text = when(jugador.posicion) {
-                                    "D" -> "Drive"
-                                    "R" -> "Revés"
-                                    else -> "Ambos"
-                                },
+                                text = "$posText - C${jugador.categoria}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = when(jugador.posicion) {
                                     "D" -> Color(0xFF2196F3)

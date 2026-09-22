@@ -103,14 +103,16 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = jugador.nombre,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (jugador.activo) Color.Unspecified else MaterialTheme.colorScheme.outline
+                            )
+                            
+                            Spacer(modifier = Modifier.height(6.dp))
+                            
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = jugador.nombre,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (jugador.activo) Color.Unspecified else MaterialTheme.colorScheme.outline
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Badge(
                                     containerColor = when(jugador.posicion) {
                                         "D" -> Color(0xFF2196F3) // Azul para Drive
@@ -125,17 +127,20 @@ fun JugadoresScreen(viewModel: MancosViewModel) {
                                             else -> "AMBOS"
                                         },
                                         modifier = Modifier.padding(horizontal = 4.dp),
-                                        color = Color.White
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Badge(
                                     containerColor = Color(0xFF4CAF50) // Verde para Categoría
                                 ) {
                                     Text(
                                         text = "C${jugador.categoria}",
-                                        modifier = Modifier.padding(horizontal = 4.dp),
-                                        color = Color.White
+                                        modifier = Modifier.padding(horizontal = 6.dp),
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
