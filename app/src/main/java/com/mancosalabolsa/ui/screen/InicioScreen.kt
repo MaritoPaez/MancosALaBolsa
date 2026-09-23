@@ -38,10 +38,6 @@ fun InicioScreen(viewModel: MancosViewModel) {
     val error by viewModel.errorSorteo.collectAsState()
     val inconsistencia by viewModel.inconsistenciaPosiciones.collectAsState()
     val sorteando by viewModel.sorteando.collectAsState()
-    
-    val respetarExclusiones by viewModel.respetarExclusiones.collectAsState()
-    val nivelarPosiciones by viewModel.nivelarPosiciones.collectAsState()
-    val nivelarCategorias by viewModel.nivelarCategorias.collectAsState()
 
     val context = LocalContext.current
 
@@ -72,42 +68,6 @@ fun InicioScreen(viewModel: MancosViewModel) {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            // Panel de Configuración de Sorteo
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Configuración del Sorteo",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    
-                    ConfigSwitchRow(
-                        label = "Nivelar Categorías (Suma a 15)",
-                        checked = nivelarCategorias,
-                        onCheckedChange = { viewModel.toggleNivelarCategorias(it) }
-                    )
-                    ConfigSwitchRow(
-                        label = "Equilibrar Posiciones (D/R)",
-                        checked = nivelarPosiciones,
-                        onCheckedChange = { viewModel.toggleNivelarPosiciones(it) }
-                    )
-                    ConfigSwitchRow(
-                        label = "Respetar Exclusiones",
-                        checked = respetarExclusiones,
-                        onCheckedChange = { viewModel.toggleRespetarExclusiones(it) }
                     )
                 }
             }
@@ -323,29 +283,5 @@ fun formatResultLine(linea: String): AnnotatedString {
             }
             if (currentIndex < linea.length) append(linea.substring(currentIndex))
         }
-    }
-}
-
-@Composable
-fun ConfigSwitchRow(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
     }
 }

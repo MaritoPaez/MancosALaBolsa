@@ -27,6 +27,10 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
     var showResetAppDialog by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    val respetarExclusiones by viewModel.respetarExclusiones.collectAsState()
+    val nivelarPosiciones by viewModel.nivelarPosiciones.collectAsState()
+    val nivelarCategorias by viewModel.nivelarCategorias.collectAsState()
+
     // Launcher para Exportar
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -99,6 +103,36 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Sección Preferencias del Sorteo
+        Text("Preferencias del Sorteo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                ConfigSwitchRow(
+                    label = "Nivelar Categorías (Suma a 15)",
+                    checked = nivelarCategorias,
+                    onCheckedChange = { viewModel.toggleNivelarCategorias(it) }
+                )
+                ConfigSwitchRow(
+                    label = "Equilibrar Posiciones (D/R)",
+                    checked = nivelarPosiciones,
+                    onCheckedChange = { viewModel.toggleNivelarPosiciones(it) }
+                )
+                ConfigSwitchRow(
+                    label = "Respetar Exclusiones",
+                    checked = respetarExclusiones,
+                    onCheckedChange = { viewModel.toggleRespetarExclusiones(it) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Sección Backup
         Text("Backup y Datos", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -212,6 +246,30 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
             },
             title = { Text("Información") },
             text = { Text(message!!) }
+        )
+    }
+}
+
+@Composable
+fun ConfigSwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
         )
     }
 }
