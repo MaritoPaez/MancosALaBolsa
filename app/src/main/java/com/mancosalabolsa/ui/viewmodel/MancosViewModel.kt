@@ -68,6 +68,20 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private val _sorteando = MutableStateFlow(false)
     val sorteando = _sorteando.asStateFlow()
 
+    // Filtros dinámicos de sorteo
+    private val _respetarExclusiones = MutableStateFlow(true)
+    val respetarExclusiones = _respetarExclusiones.asStateFlow()
+
+    private val _nivelarPosiciones = MutableStateFlow(true)
+    val nivelarPosiciones = _nivelarPosiciones.asStateFlow()
+
+    private val _nivelarCategorias = MutableStateFlow(true)
+    val nivelarCategorias = _nivelarCategorias.asStateFlow()
+
+    fun toggleRespetarExclusiones(value: Boolean) { _respetarExclusiones.value = value }
+    fun toggleNivelarPosiciones(value: Boolean) { _nivelarPosiciones.value = value }
+    fun toggleNivelarCategorias(value: Boolean) { _nivelarCategorias.value = value }
+
     fun togglePlayerSelection(playerId: Int) {
         val current = _selectedPlayerIds.value
         if (current.contains(playerId)) {
@@ -93,8 +107,19 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             kotlinx.coroutines.delay(2000) // 2 segundos de animación
             _sorteando.value = false
 
-            // Intento 1: Sorteo ideal (Sin D-D ni R-R) Y con nivelación de categoría estricta (14 a 16)
-            var resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false, filtrarCategoria = true)
+            // Filtros dinámicos elegidos por el usuario
+            val configRespetarExcl = _respetarExclusiones.value
+            val configNivelarPos = _nivelarPosiciones.value
+            val configNivelarCat = _nivelarCategorias.value
+
+            // Intento 1: Obedece al 100% las preferencias elegidas por el usuario
+            var resultado = intentarSorteo(
+                jugadores = presentes, 
+                exclusiones = exclusiones, 
+                aplicarExclusiones = configRespetarExcl,
+                forzarPosiciones = configNivelarPos, 
+                filtrarCategoria = configNivelarCat
+            )
             
             if (resultado != null) {
                 _resultadoSorteo.value = resultado
@@ -102,19 +127,38 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                 _errorSorteo.value = null
                 saveResult(resultado)
             } else {
-                // Intento 2: Sorteo ideal de posiciones pero relajando categorías si no se puede cumplir
-                resultado = intentarSorteo(presentes, exclusiones, permitirForzados = false, filtrarCategoria = false)
+                // Si el intento ideal con las preferencias del usuario falla por rigidez matemática,
+                // empezamos a relajar las condiciones secundarias automáticamente para no trabar el sorteo,
+                // excepto aquellas que el usuario apagó explícitamente (si ya estaban apagadas no tiene sentido).
+                
+                // Intento 2: Relajar categorías (siempre que el usuario las haya querido nivelar originalmente)
+                if (configNivelarCat) {
+                    resultado = intentarSorteo(
+                        jugadores = presentes, 
+                        exclusiones = exclusiones, 
+                        aplicarExclusiones = configRespetarExcl,
+                        forzarPosiciones = configNivelarPos, 
+                        filtrarCategoria = false
+                    )
+                }
+                
                 if (resultado != null) {
                     _resultadoSorteo.value = resultado
                     _inconsistenciaPosiciones.value = false
                     _errorSorteo.value = null
                     saveResult(resultado)
                 } else {
-                    // Intento 3: Sorteo con inconsistencias de posición y sin filtro estricto de categoría
-                    resultado = intentarSorteo(presentes, exclusiones, permitirForzados = true, filtrarCategoria = false)
+                    // Intento 3: Permitir forzar posiciones cruzadas (D-D, R-R) si la matemática sigue trabada
+                    resultado = intentarSorteo(
+                        jugadores = presentes, 
+                        exclusiones = exclusiones, 
+                        aplicarExclusiones = configRespetarExcl,
+                        forzarPosiciones = false, 
+                        filtrarCategoria = false
+                    )
                     if (resultado != null) {
                         _resultadoSorteo.value = resultado
-                        _inconsistenciaPosiciones.value = true
+                        _inconsistenciaPosiciones.value = configNivelarPos // Solo marca aviso si el usuario quería nivelarlas
                         _errorSorteo.value = null
                         saveResult(resultado)
                     } else {
@@ -135,7 +179,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private fun intentarSorteo(
         jugadores: List<Jugador>, 
         exclusiones: List<Exclusion>, 
-        permitirForzados: Boolean,
+        aplicarExclusiones: Boolean,
+        forzarPosiciones: Boolean,
         filtrarCategoria: Boolean
     ): String? {
         val totalIntentos = 2000
@@ -154,14 +199,14 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                     val p1 = shuffled[i]
                     val p2 = shuffled[i + 1]
                     
-                    // Regla de Exclusiones (Estricta)
-                    if (estanExcluidos(p1, p2, exclusiones)) {
+                    // Regla de Exclusiones (Condicionada dinámicamente)
+                    if (aplicarExclusiones && estanExcluidos(p1, p2, exclusiones)) {
                         esValido = false
                         break
                     }
 
-                    // Regla de Posiciones (Opcional según permitirForzados)
-                    if (!permitirForzados) {
+                    // Regla de Posiciones (Condicionada dinámicamente)
+                    if (forzarPosiciones) {
                         if ((p1.posicion == "D" && p2.posicion == "D") || 
                             (p1.posicion == "R" && p2.posicion == "R")) {
                             esValido = false
@@ -169,7 +214,7 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         }
                     }
 
-                    // Regla de Categorías (Opcional según filtrarCategoria - Tendencia a +15)
+                    // Regla de Categorías (Condicionada dinámicamente)
                     val sumaCat = p1.categoria + p2.categoria
                     if (filtrarCategoria) {
                         if (sumaCat < 14 || sumaCat > 16) {
@@ -178,8 +223,13 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         }
                     }
                     
-                    // Calculamos el desvío absoluto respecto al 15 ideal (ej: 14 da 1, 16 da 1, 15 da 0)
-                    desvioSorteoActual += abs(sumaCat - 15)
+                    // Si nivelar categorías está activado, calculamos desvío hacia 15.
+                    // Si está desactivado por el usuario, el desvío es siempre 0 (puro azar).
+                    desvioSorteoActual += if (filtrarCategoria || _nivelarCategorias.value) {
+                        abs(sumaCat - 15)
+                    } else {
+                        0
+                    }
 
                     listaParejas.add(listOf(p1, p2))
                     i += 2
