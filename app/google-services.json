@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "421042417623",
+    "project_id": "mancos-a-la-bolsa",
+    "storage_bucket": "mancos-a-la-bolsa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:421042417623:android:588cf86da3055c3d1f6592",
+        "android_client_info": {
+          "package_name": "com.mancosalabolsa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuUdIOkj1j05Y-F8aGfMT9KpHCBQCx7Js"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
