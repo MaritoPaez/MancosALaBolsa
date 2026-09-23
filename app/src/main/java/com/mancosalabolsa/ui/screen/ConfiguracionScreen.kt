@@ -3,6 +3,8 @@ package com.mancosalabolsa.ui.screen
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.DeleteForever
@@ -76,6 +78,7 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
             text = "Configuración",
@@ -189,6 +192,8 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
             Spacer(Modifier.width(8.dp))
             Text("Reiniciar Aplicación (Borrar Todo)")
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 
     // Diálogo Borrar Historial
