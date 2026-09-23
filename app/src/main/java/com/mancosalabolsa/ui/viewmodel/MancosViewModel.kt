@@ -139,7 +139,7 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         filtrarCategoria: Boolean
     ): String? {
         val totalIntentos = 2000
-        var mejorResultado: String? = null
+        val candidatosMejores = mutableListOf<String>()
         var menorDesvioTotal = Int.MAX_VALUE
         
         repeat(totalIntentos) {
@@ -190,19 +190,19 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             }
 
             if (esValido) {
-                // Si encontramos un sorteo con menos desvío que el anterior guardado, nos lo quedamos
                 if (desvioSorteoActual < menorDesvioTotal) {
+                    // Encontramos un desvío estrictamente mejor: limpiamos los anteriores
                     menorDesvioTotal = desvioSorteoActual
-                    mejorResultado = formatResultado(listaParejas)
-                    
-                    // Si el desvío es 0 (Sorteo Perfecto), ya no necesitamos seguir buscando
-                    if (menorDesvioTotal == 0) {
-                        return mejorResultado
-                    }
+                    candidatosMejores.clear()
+                    candidatosMejores.add(formatResultado(listaParejas))
+                } else if (desvioSorteoActual == menorDesvioTotal) {
+                    // Encontramos otra combinación con la misma calidad de desvío: la sumamos como candidata
+                    candidatosMejores.add(formatResultado(listaParejas))
                 }
             }
         }
-        return mejorResultado
+        // Retornamos uno al azar de entre todos los mejores candidatos encontrados
+        return candidatosMejores.randomOrNull()
     }
 
     private fun estanExcluidos(j1: Jugador, j2: Jugador, exclusiones: List<Exclusion>): Boolean {
