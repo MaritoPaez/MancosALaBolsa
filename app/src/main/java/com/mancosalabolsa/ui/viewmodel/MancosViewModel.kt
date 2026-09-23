@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
 
@@ -137,11 +138,15 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         permitirForzados: Boolean,
         filtrarCategoria: Boolean
     ): String? {
-        val totalIntentos = 1000
+        val totalIntentos = 2000
+        var mejorResultado: String? = null
+        var menorDesvioTotal = Int.MAX_VALUE
+        
         repeat(totalIntentos) {
             val shuffled = jugadores.shuffled()
             var esValido = true
             val listaParejas = mutableListOf<List<Jugador>>()
+            var desvioSorteoActual = 0
             
             var i = 0
             while (i < shuffled.size) {
@@ -164,14 +169,17 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         }
                     }
 
-                    // Regla de Categorías (Opcional según filtrarCategoria - Tendencia a +15, rango 14-16 tolerado)
+                    // Regla de Categorías (Opcional según filtrarCategoria - Tendencia a +15)
+                    val sumaCat = p1.categoria + p2.categoria
                     if (filtrarCategoria) {
-                        val sumaCat = p1.categoria + p2.categoria
                         if (sumaCat < 14 || sumaCat > 16) {
                             esValido = false
                             break
                         }
                     }
+                    
+                    // Calculamos el desvío absoluto respecto al 15 ideal (ej: 14 da 1, 16 da 1, 15 da 0)
+                    desvioSorteoActual += abs(sumaCat - 15)
 
                     listaParejas.add(listOf(p1, p2))
                     i += 2
@@ -182,10 +190,19 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             }
 
             if (esValido) {
-                return formatResultado(listaParejas)
+                // Si encontramos un sorteo con menos desvío que el anterior guardado, nos lo quedamos
+                if (desvioSorteoActual < menorDesvioTotal) {
+                    menorDesvioTotal = desvioSorteoActual
+                    mejorResultado = formatResultado(listaParejas)
+                    
+                    // Si el desvío es 0 (Sorteo Perfecto), ya no necesitamos seguir buscando
+                    if (menorDesvioTotal == 0) {
+                        return mejorResultado
+                    }
+                }
             }
         }
-        return null
+        return mejorResultado
     }
 
     private fun estanExcluidos(j1: Jugador, j2: Jugador, exclusiones: List<Exclusion>): Boolean {
