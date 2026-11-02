@@ -111,6 +111,7 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             val configRespetarExcl = _respetarExclusiones.value
             val configNivelarPos = _nivelarPosiciones.value
             val configNivelarCat = _nivelarCategorias.value
+            val parejasRecientes = obtenerParejasRecientes()
 
             // Intento 1: Obedece al 100% las preferencias elegidas por el usuario
             var resultado = intentarSorteo(
@@ -118,7 +119,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                 exclusiones = exclusiones, 
                 aplicarExclusiones = configRespetarExcl,
                 forzarPosiciones = configNivelarPos, 
-                filtrarCategoria = configNivelarCat
+                filtrarCategoria = configNivelarCat,
+                parejasRecientes = parejasRecientes
             )
             
             if (resultado != null) {
@@ -138,7 +140,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         exclusiones = exclusiones, 
                         aplicarExclusiones = configRespetarExcl,
                         forzarPosiciones = configNivelarPos, 
-                        filtrarCategoria = false
+                        filtrarCategoria = false,
+                        parejasRecientes = parejasRecientes
                     )
                 }
                 
@@ -154,7 +157,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         exclusiones = exclusiones, 
                         aplicarExclusiones = configRespetarExcl,
                         forzarPosiciones = false, 
-                        filtrarCategoria = false
+                        filtrarCategoria = false,
+                        parejasRecientes = parejasRecientes
                     )
                     if (resultado != null) {
                         _resultadoSorteo.value = resultado
@@ -176,12 +180,40 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         }
     }
 
+    private fun obtenerParejasRecientes(): Set<Set<String>> {
+        val parejasRecientes = mutableSetOf<Set<String>>()
+        // Tomamos los últimos 3 sorteos del historial
+        val ultimosSorteos = historial.value.take(3)
+        for (h in ultimosSorteos) {
+            for (linea in h.resultado.lines()) {
+                if (linea.contains(" - ") && !linea.contains("(Suelto/a)")) {
+                    val partes = linea.split(" - ")
+                    if (partes.size == 2) {
+                        val nombre1 = extraerNombreDeLinea(partes[0])
+                        val nombre2 = extraerNombreDeLinea(partes[1])
+                        if (nombre1.isNotBlank() && nombre2.isNotBlank()) {
+                            parejasRecientes.add(setOf(nombre1, nombre2))
+                        }
+                    }
+                }
+            }
+        }
+        return parejasRecientes
+    }
+
+    private fun extraerNombreDeLinea(fragmento: String): String {
+        val sinNumero = fragmento.replace(Regex("^\\d+\\.\\s*"), "")
+        val nombreLimpio = sinNumero.replace(Regex("\\s*\\([A-Za-z/]+\\)\\s*$"), "").trim()
+        return nombreLimpio
+    }
+
     private fun intentarSorteo(
         jugadores: List<Jugador>, 
         exclusiones: List<Exclusion>, 
         aplicarExclusiones: Boolean,
         forzarPosiciones: Boolean,
-        filtrarCategoria: Boolean
+        filtrarCategoria: Boolean,
+        parejasRecientes: Set<Set<String>>
     ): String? {
         val totalIntentos = 2000
         val candidatosMejores = mutableListOf<String>()
@@ -229,6 +261,11 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         abs(sumaCat - 15)
                     } else {
                         0
+                    }
+
+                    // Penalización suave para intentar no repetir parejas de los últimos 3 sorteos
+                    if (parejasRecientes.contains(setOf(p1.nombre, p2.nombre))) {
+                        desvioSorteoActual += 100
                     }
 
                     listaParejas.add(listOf(p1, p2))
