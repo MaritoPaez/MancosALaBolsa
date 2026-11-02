@@ -265,11 +265,11 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
     private fun formatResultado(parejas: List<List<Jugador>>): String {
         return parejas.mapIndexed { index, p ->
             if (p.size == 1) {
-                "${index + 1}. ${p[0].nombre} (${p[0].posicion}) [C${p[0].categoria}] - (Suelto/a)"
+                "${index + 1}. ${p[0].nombre} (${p[0].posicion}) - (Suelto/a)"
             } else {
                 val p1 = p[0]
                 val p2 = p[1]
-                "${index + 1}. ${p1.nombre} (${p1.posicion}) [C${p1.categoria}] - ${p2.nombre} (${p2.posicion}) [C${p2.categoria}]"
+                "${index + 1}. ${p1.nombre} (${p1.posicion}) - ${p2.nombre} (${p2.posicion})"
             }
         }.joinToString("\n")
     }

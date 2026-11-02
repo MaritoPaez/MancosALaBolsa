@@ -13,8 +13,8 @@ android {
         applicationId = "com.mancosalabolsa"
         minSdk = 24
         targetSdk = 37
-        versionCode = 72
-        versionName = "2.4.1"
+        versionCode = 73
+        versionName = "2.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
