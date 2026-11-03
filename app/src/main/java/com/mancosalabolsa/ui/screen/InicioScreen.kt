@@ -1,6 +1,15 @@
 package com.mancosalabolsa.ui.screen
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -172,14 +181,32 @@ fun InicioScreen(viewModel: MancosViewModel) {
                 dismissButton = {
                     Button(
                         onClick = {
-                            val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, "Mancos a la Bolsa - $fechaActual\n\n$resultado")
-                                type = "text/plain"
+                            try {
+                                val bitmap = generateShareableBitmap(context, resultado!!)
+                                val file = File(context.cacheDir, "sorteo_mancos.png")
+                                FileOutputStream(file).use { out ->
+                                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                                }
+                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                                
+                                val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_TEXT, "🎾 Mancos a la Bolsa - $fechaActual\n\n$resultado")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Compartir Sorteo"))
+                            } catch (e: Exception) {
+                                val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, "Mancos a la Bolsa - $fechaActual\n\n$resultado")
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, null)
+                                context.startActivity(shareIntent)
                             }
-                            val shareIntent = Intent.createChooser(sendIntent, null)
-                            context.startActivity(shareIntent)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
@@ -284,4 +311,112 @@ fun formatResultLine(linea: String): AnnotatedString {
             if (currentIndex < linea.length) append(linea.substring(currentIndex))
         }
     }
+}
+
+fun generateShareableBitmap(context: android.content.Context, resultado: String): android.graphics.Bitmap {
+    val width = 1080
+    val padding = 60
+    val innerPadding = 40
+    
+    val paintBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#2E2E2E") }
+    val paintCardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#0D3311"); style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
+    val paintCardBorder = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#D4F05C"); style = android.graphics.Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = true }
+    
+    val titlePaint = android.text.TextPaint().apply { color = android.graphics.Color.WHITE; textSize = 48f; isAntiAlias = true; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+    val subtitlePaint = android.text.TextPaint().apply { color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 32f; isAntiAlias = true }
+    val linePaint = android.text.TextPaint().apply { color = android.graphics.Color.WHITE; textSize = 38f; isAntiAlias = true }
+    
+    val lines = resultado.lines()
+    val headerHeight = 160
+    val subtitleHeight = 100
+    val cardPaddingVertical = 40 * 2
+    val lineHeight = 65
+    val cardContentHeight = lines.size * lineHeight + cardPaddingVertical
+    val totalHeight = headerHeight + subtitleHeight + cardContentHeight + (padding * 2)
+    
+    val bitmap = android.graphics.Bitmap.createBitmap(width, totalHeight, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    
+    canvas.drawRect(0f, 0f, width.toFloat(), totalHeight.toFloat(), paintBg)
+    
+    val x = padding.toFloat()
+    var y = padding.toFloat() + 45f
+    canvas.drawText("Parejas Sorteadas", x, y, titlePaint)
+    
+    y += 70f
+    canvas.drawText("Juegan primero las parejas 1 vs 2, y asi sucesivamente.", x, y, subtitlePaint)
+    
+    y += 30f
+    val cardTop = y
+    val cardLeft = padding.toFloat()
+    val cardRight = (width - padding).toFloat()
+    val cardBottom = cardTop + cardContentHeight
+    
+    val rectF = android.graphics.RectF(cardLeft, cardTop, cardRight, cardBottom)
+    canvas.drawRoundRect(rectF, 24f, 24f, paintCardBg)
+    canvas.drawRoundRect(rectF, 24f, 24f, paintCardBorder)
+    
+    var textY = cardTop + 50f + cardPaddingVertical / 2f
+    val textX = cardLeft + innerPadding.toFloat()
+    
+    lines.forEach { line ->
+        drawColoredLine(canvas, line, textX, textY, linePaint)
+        textY += lineHeight
+    }
+    
+    return bitmap
+}
+
+fun drawColoredLine(canvas: android.graphics.Canvas, line: String, startX: Float, y: Float, defaultPaint: android.text.TextPaint) {
+    val fluoGreen = android.graphics.Color.parseColor("#D4F05C")
+    val celeste = android.graphics.Color.parseColor("#2196F3")
+    val rojo = android.graphics.Color.parseColor("#F44336")
+    val blanco = android.graphics.Color.WHITE
+    
+    val parts = splitLineIntoColoredParts(line)
+    var currentX = startX
+    for (part in parts) {
+        val paint = android.text.TextPaint(defaultPaint).apply {
+            color = when (part.type) {
+                PartType.NUMBER -> fluoGreen
+                PartType.DRIVE -> celeste
+                PartType.REVES -> rojo
+                PartType.AMBOS -> blanco
+                PartType.TEXT -> blanco
+            }
+        }
+        canvas.drawText(part.text, currentX, y, paint)
+        currentX += paint.measureText(part.text)
+    }
+}
+
+enum class PartType { NUMBER, DRIVE, REVES, AMBOS, TEXT }
+data class TextPart(val text: String, val type: PartType)
+
+fun splitLineIntoColoredParts(line: String): List<TextPart> {
+    val result = mutableListOf<TextPart>()
+    val regex = Regex("(\\d+\\.|\\(D\\)|\\(R\\)|\\(X\\))")
+    val matches = regex.findAll(line)
+    var lastIndex = 0
+    
+    for (match in matches) {
+        if (match.range.first > lastIndex) {
+            val textBefore = line.substring(lastIndex, match.range.first)
+            result.add(TextPart(textBefore, PartType.TEXT))
+        }
+        val matchStr = match.value
+        val type = when {
+            matchStr.matches(Regex("\\d+\\.")) -> PartType.NUMBER
+            matchStr == "(D)" -> PartType.DRIVE
+            matchStr == "(R)" -> PartType.REVES
+            matchStr == "(X)" -> PartType.AMBOS
+            else -> PartType.TEXT
+        }
+        result.add(TextPart(matchStr, type))
+        lastIndex = match.range.last + 1
+    }
+    if (lastIndex < line.length) {
+        result.add(TextPart(line.substring(lastIndex), PartType.TEXT))
+    }
+    return result
 }
