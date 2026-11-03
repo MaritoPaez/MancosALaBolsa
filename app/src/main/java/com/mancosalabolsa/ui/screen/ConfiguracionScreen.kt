@@ -21,6 +21,8 @@ import com.mancosalabolsa.ui.viewmodel.MancosViewModel
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ConfiguracionScreen(viewModel: MancosViewModel) {
@@ -32,6 +34,7 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
     val respetarExclusiones by viewModel.respetarExclusiones.collectAsState()
     val nivelarPosiciones by viewModel.nivelarPosiciones.collectAsState()
     val nivelarCategorias by viewModel.nivelarCategorias.collectAsState()
+    val allJugadores by viewModel.allJugadores.collectAsState()
 
     // Launcher para Exportar
     val exportLauncher = rememberLauncherForActivityResult(
@@ -99,7 +102,7 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text("Mancos a la Bolsa", style = MaterialTheme.typography.titleMedium)
-                    Text("Versión 2.4.1", style = MaterialTheme.typography.bodySmall)
+                    Text("Versión 2.5.1", style = MaterialTheme.typography.bodySmall)
                     Text("Creador: Mario Paez", style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -143,7 +146,13 @@ fun ConfiguracionScreen(viewModel: MancosViewModel) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { exportLauncher.launch("mancos_backup.json") },
+            onClick = {
+                val count = allJugadores.size
+                val dateFormat = SimpleDateFormat("MMddyy_HHmm", Locale.getDefault())
+                val timestamp = dateFormat.format(Date())
+                val filename = "${timestamp}hs_${count}_Mancos.json"
+                exportLauncher.launch(filename)
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
