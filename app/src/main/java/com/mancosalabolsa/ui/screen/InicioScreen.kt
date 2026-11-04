@@ -7,6 +7,8 @@ import android.graphics.Color as AndroidColor
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
@@ -326,25 +328,32 @@ fun generateShareableBitmap(context: android.content.Context, resultado: String)
         if (w > maxLineWidth) maxLineWidth = w
     }
     
-    val subtitleWidth = subtitlePaint.measureText("Juegan primero las parejas 1 vs 2, y asi sucesivamente.")
     val titleWidth = titlePaint.measureText("Parejas Sorteadas")
     
-    val contentMaxW = maxOf(maxLineWidth, subtitleWidth, titleWidth)
+    val contentMaxW = maxOf(maxLineWidth, titleWidth)
     val padding = 35f
     val innerPadding = 30f
     
-    val width = (contentMaxW + (innerPadding * 2) + (padding * 2)).toInt().coerceIn(480, 800)
+    val width = (contentMaxW + (innerPadding * 2) + (padding * 2)).toInt().coerceIn(520, 850)
+    val maxTextWidth = (width - (padding * 2)).toInt()
+    
+    val subtitleText = "Juegan primero las parejas 1 vs 2, y asi sucesivamente."
+    val subtitleLayout = StaticLayout.Builder.obtain(subtitleText, 0, subtitleText.length, subtitlePaint, maxTextWidth)
+        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+        .setLineSpacing(0f, 1f)
+        .setIncludePad(false)
+        .build()
     
     val paintBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#2E2E2E") }
     val paintCardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#0D3311"); style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
     val paintCardBorder = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#D4F05C"); style = android.graphics.Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = true }
     
-    val headerHeight = 150f
-    val subtitleHeight = 80f
+    val headerHeight = 60f
+    val subtitleHeight = subtitleLayout.height.toFloat()
     val cardPaddingVertical = 40f * 2
     val lineHeight = 65f
     val cardContentHeight = lines.size * lineHeight + cardPaddingVertical
-    val totalHeight = (headerHeight + subtitleHeight + cardContentHeight + (padding * 2)).toInt()
+    val totalHeight = (padding + headerHeight + 20f + subtitleHeight + 30f + cardContentHeight + padding).toInt()
     
     val bitmap = android.graphics.Bitmap.createBitmap(width, totalHeight, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -355,10 +364,13 @@ fun generateShareableBitmap(context: android.content.Context, resultado: String)
     var y = padding + 45f
     canvas.drawText("Parejas Sorteadas", x, y, titlePaint)
     
-    y += 65f
-    canvas.drawText("Juegan primero las parejas 1 vs 2, y asi sucesivamente.", x, y, subtitlePaint)
-    
     y += 25f
+    canvas.save()
+    canvas.translate(x, y)
+    subtitleLayout.draw(canvas)
+    canvas.restore()
+    
+    y += subtitleHeight + 30f
     val cardTop = y
     val cardLeft = padding
     val cardRight = width - padding
