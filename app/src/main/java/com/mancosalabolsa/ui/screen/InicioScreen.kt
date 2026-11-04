@@ -314,50 +314,62 @@ fun formatResultLine(linea: String): AnnotatedString {
 }
 
 fun generateShareableBitmap(context: android.content.Context, resultado: String): android.graphics.Bitmap {
-    val width = 1080
-    val padding = 60
-    val innerPadding = 40
-    
-    val paintBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#2E2E2E") }
-    val paintCardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#0D3311"); style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
-    val paintCardBorder = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#D4F05C"); style = android.graphics.Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = true }
-    
     val titlePaint = android.text.TextPaint().apply { color = android.graphics.Color.WHITE; textSize = 48f; isAntiAlias = true; typeface = android.graphics.Typeface.DEFAULT_BOLD }
     val subtitlePaint = android.text.TextPaint().apply { color = android.graphics.Color.parseColor("#CCCCCC"); textSize = 32f; isAntiAlias = true }
     val linePaint = android.text.TextPaint().apply { color = android.graphics.Color.WHITE; textSize = 38f; isAntiAlias = true }
     
     val lines = resultado.lines()
-    val headerHeight = 160
-    val subtitleHeight = 100
-    val cardPaddingVertical = 40 * 2
-    val lineHeight = 65
+    
+    var maxLineWidth = 0f
+    lines.forEach { line ->
+        val w = linePaint.measureText(line)
+        if (w > maxLineWidth) maxLineWidth = w
+    }
+    
+    val subtitleWidth = subtitlePaint.measureText("Juegan primero las parejas 1 vs 2, y asi sucesivamente.")
+    val titleWidth = titlePaint.measureText("Parejas Sorteadas")
+    
+    val contentMaxW = maxOf(maxLineWidth, subtitleWidth, titleWidth)
+    val padding = 50f
+    val innerPadding = 40f
+    
+    val width = (contentMaxW + (innerPadding * 2) + (padding * 2)).toInt().coerceIn(720, 1080)
+    
+    val paintBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#2E2E2E") }
+    val paintCardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#0D3311"); style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
+    val paintCardBorder = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#D4F05C"); style = android.graphics.Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = true }
+    
+    val headerHeight = 150f
+    val subtitleHeight = 80f
+    val cardPaddingVertical = 40f * 2
+    val lineHeight = 65f
     val cardContentHeight = lines.size * lineHeight + cardPaddingVertical
-    val totalHeight = headerHeight + subtitleHeight + cardContentHeight + (padding * 2)
+    val totalHeight = (headerHeight + subtitleHeight + cardContentHeight + (padding * 2)).toInt()
     
     val bitmap = android.graphics.Bitmap.createBitmap(width, totalHeight, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
     
     canvas.drawRect(0f, 0f, width.toFloat(), totalHeight.toFloat(), paintBg)
     
-    val x = padding.toFloat()
-    var y = padding.toFloat() + 45f
+    val x = padding
+    var y = padding + 45f
     canvas.drawText("Parejas Sorteadas", x, y, titlePaint)
     
-    y += 70f
+    y += 65f
     canvas.drawText("Juegan primero las parejas 1 vs 2, y asi sucesivamente.", x, y, subtitlePaint)
     
-    y += 30f
+    y += 25f
     val cardTop = y
-    val cardLeft = padding.toFloat()
-    val cardRight = (width - padding).toFloat()
+    val cardLeft = padding
+    val cardRight = width - padding
     val cardBottom = cardTop + cardContentHeight
     
     val rectF = android.graphics.RectF(cardLeft, cardTop, cardRight, cardBottom)
     canvas.drawRoundRect(rectF, 24f, 24f, paintCardBg)
     canvas.drawRoundRect(rectF, 24f, 24f, paintCardBorder)
     
-    var textY = cardTop + 50f + cardPaddingVertical / 2f
-    val textX = cardLeft + innerPadding.toFloat()
+    var textY = cardTop + 40f + cardPaddingVertical / 2f
+    val textX = cardLeft + innerPadding
     
     lines.forEach { line ->
         drawColoredLine(canvas, line, textX, textY, linePaint)
