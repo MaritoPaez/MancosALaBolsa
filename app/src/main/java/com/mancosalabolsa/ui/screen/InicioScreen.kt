@@ -330,10 +330,10 @@ fun generateShareableBitmap(context: android.content.Context, resultado: String)
     val titleWidth = titlePaint.measureText("Parejas Sorteadas")
     
     val contentMaxW = maxOf(maxLineWidth, subtitleWidth, titleWidth)
-    val padding = 50f
-    val innerPadding = 40f
+    val padding = 35f
+    val innerPadding = 30f
     
-    val width = (contentMaxW + (innerPadding * 2) + (padding * 2)).toInt().coerceIn(720, 1080)
+    val width = (contentMaxW + (innerPadding * 2) + (padding * 2)).toInt().coerceIn(480, 800)
     
     val paintBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#2E2E2E") }
     val paintCardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#0D3311"); style = android.graphics.Paint.Style.FILL; isAntiAlias = true }
