@@ -113,14 +113,15 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
             val configNivelarCat = _nivelarCategorias.value
             val parejasRecientes = obtenerParejasRecientes()
 
-            // Intento 1: Obedece al 100% las preferencias elegidas por el usuario
+            // Intento 1: Obedece al 100% las preferencias elegidas por el usuario (prohibiendo parejas recientes)
             var resultado = intentarSorteo(
                 jugadores = presentes, 
                 exclusiones = exclusiones, 
                 aplicarExclusiones = configRespetarExcl,
                 forzarPosiciones = configNivelarPos, 
                 filtrarCategoria = configNivelarCat,
-                parejasRecientes = parejasRecientes
+                parejasRecientes = parejasRecientes,
+                prohibirRecientes = true
             )
             
             if (resultado != null) {
@@ -129,11 +130,7 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                 _errorSorteo.value = null
                 saveResult(resultado)
             } else {
-                // Si el intento ideal con las preferencias del usuario falla por rigidez matemática,
-                // empezamos a relajar las condiciones secundarias automáticamente para no trabar el sorteo,
-                // excepto aquellas que el usuario apagó explícitamente (si ya estaban apagadas no tiene sentido).
-                
-                // Intento 2: Relajar categorías (siempre que el usuario las haya querido nivelar originalmente)
+                // Intento 2: Relajar categorías manteniendo prohibición de parejas recientes
                 if (configNivelarCat) {
                     resultado = intentarSorteo(
                         jugadores = presentes, 
@@ -141,7 +138,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         aplicarExclusiones = configRespetarExcl,
                         forzarPosiciones = configNivelarPos, 
                         filtrarCategoria = false,
-                        parejasRecientes = parejasRecientes
+                        parejasRecientes = parejasRecientes,
+                        prohibirRecientes = true
                     )
                 }
                 
@@ -151,23 +149,43 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                     _errorSorteo.value = null
                     saveResult(resultado)
                 } else {
-                    // Intento 3: Permitir forzar posiciones cruzadas (D-D, R-R) si la matemática sigue trabada
+                    // Intento 3: Relajar posiciones manteniendo prohibición de parejas recientes
                     resultado = intentarSorteo(
                         jugadores = presentes, 
                         exclusiones = exclusiones, 
                         aplicarExclusiones = configRespetarExcl,
                         forzarPosiciones = false, 
                         filtrarCategoria = false,
-                        parejasRecientes = parejasRecientes
+                        parejasRecientes = parejasRecientes,
+                        prohibirRecientes = true
                     )
+                    
                     if (resultado != null) {
                         _resultadoSorteo.value = resultado
-                        _inconsistenciaPosiciones.value = configNivelarPos // Solo marca aviso si el usuario quería nivelarlas
+                        _inconsistenciaPosiciones.value = configNivelarPos
                         _errorSorteo.value = null
                         saveResult(resultado)
                     } else {
-                        _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
-                        _resultadoSorteo.value = null
+                        // Intento 4 (Último recurso): Relajar prohibición de recientes si la matemática es imposible
+                        resultado = intentarSorteo(
+                            jugadores = presentes, 
+                            exclusiones = exclusiones, 
+                            aplicarExclusiones = configRespetarExcl,
+                            forzarPosiciones = false, 
+                            filtrarCategoria = false,
+                            parejasRecientes = parejasRecientes,
+                            prohibirRecientes = false
+                        )
+                        
+                        if (resultado != null) {
+                            _resultadoSorteo.value = resultado
+                            _inconsistenciaPosiciones.value = true
+                            _errorSorteo.value = null
+                            saveResult(resultado)
+                        } else {
+                            _errorSorteo.value = "No se encontró una combinación válida (revisa las exclusiones)"
+                            _resultadoSorteo.value = null
+                        }
                     }
                 }
             }
@@ -213,7 +231,8 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
         aplicarExclusiones: Boolean,
         forzarPosiciones: Boolean,
         filtrarCategoria: Boolean,
-        parejasRecientes: Set<Set<String>>
+        parejasRecientes: Set<Set<String>>,
+        prohibirRecientes: Boolean = true
     ): String? {
         val totalIntentos = 2000
         val candidatosMejores = mutableListOf<String>()
@@ -263,9 +282,13 @@ class MancosViewModel(private val repository: MancosRepository) : ViewModel() {
                         0
                     }
 
-                    // Penalización suave para intentar no repetir parejas de los últimos 3 sorteos
-                    if (parejasRecientes.contains(setOf(p1.nombre, p2.nombre))) {
-                        desvioSorteoActual += 100
+                    // Regla de Parejas Recientes (Hard constraint si prohibirRecientes es true)
+                    val esReciente = parejasRecientes.contains(setOf(p1.nombre, p2.nombre))
+                    if (prohibirRecientes && esReciente) {
+                        esValido = false
+                        break
+                    } else if (esReciente) {
+                        desvioSorteoActual += 10000
                     }
 
                     listaParejas.add(listOf(p1, p2))
